@@ -12,6 +12,8 @@ import android.widget.Toast;
 
 import com.esp.log.InitLogger;
 
+import org.apache.log4j.Logger;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,18 +21,33 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CODE = 1;
 
+    private String[] getManifextPermissions() {
+        // all permissions in AndroidManifext.xml
+        // for android don't let me get them dynamically, it is ugly to code like this
+        return new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE
+                , Manifest.permission.BLUETOOTH
+                , Manifest.permission.BLUETOOTH_ADMIN
+                , Manifest.permission.ACCESS_COARSE_LOCATION};
+    }
+
     private void requestAuthorities() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            List<String> permissions0 = new ArrayList<>();
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    != PackageManager.PERMISSION_GRANTED) {
-                permissions0.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            // permissions0 means permissions require requesting
+            final List<String> permissions0 = new ArrayList<>();
+
+            for (String permission : getManifextPermissions()) {
+                if (ContextCompat.checkSelfPermission(this, permission)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    permissions0.add(permission);
+                }
             }
+
             if (!permissions0.isEmpty()) {
                 String[] permissions1 = new String[permissions0.size()];
                 for (int i = 0; i < permissions0.size(); i++) {
                     permissions1[i] = permissions0.get(i);
                 }
+                // request permission one by one
                 ActivityCompat.requestPermissions(this,
                         permissions1,
                         REQUEST_CODE
