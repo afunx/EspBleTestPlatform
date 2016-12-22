@@ -28,6 +28,7 @@ import rx.schedulers.Schedulers;
 public class DevicesActivity extends AppCompatActivity {
 
     private SwipeRefreshLayout mSwipeRefreshLayout;
+    private volatile boolean mIsRefreshing;
     private RecyclerView mRecyclerView;
     private List<BluetoothDevice> mBluetoothDevices;
     private List<Integer> mRssis;
@@ -62,6 +63,9 @@ public class DevicesActivity extends AppCompatActivity {
 
             @Override
             public void onLeScan(final BluetoothDevice device, final int rssi, byte[] scanRecord) {
+                if (mIsRefreshing) {
+                    return;
+                }
                 Observable.from(mBluetoothDevices).subscribeOn(mSingleScheduler)
                         .exists(new Func1<BluetoothDevice, Boolean>() {
                             @Override
@@ -81,7 +85,7 @@ public class DevicesActivity extends AppCompatActivity {
 
                             @Override
                             public void onNext(Boolean exist) {
-                                if(!exist) {
+                                if (!exist) {
                                     mBluetoothDevices.add(device);
                                     mRssis.add(rssi);
                                     mAdapter.notifyItemInserted(mBluetoothDevices.size() - 1);
@@ -97,6 +101,7 @@ public class DevicesActivity extends AppCompatActivity {
     }
 
     private void doRefresh() {
+        mIsRefreshing = true;
         mSwipeRefreshLayout.setRefreshing(true);
 
         Observable.create(new Observable.OnSubscribe<Object>() {
@@ -107,20 +112,23 @@ public class DevicesActivity extends AppCompatActivity {
                 subscriber.onCompleted();
             }
         }).subscribeOn(mSingleScheduler)
-        .observeOn(AndroidSchedulers.mainThread())
-        .subscribe(new Observer<Object>() {
-            @Override
-            public void onCompleted() {
-                mAdapter.notifyDataSetChanged();
-                mSwipeRefreshLayout.setRefreshing(false);
-            }
-            @Override
-            public void onError(Throwable e) {
-            }
-            @Override
-            public void onNext(Object o) {
-            }
-        });
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Observer<Object>() {
+                    @Override
+                    public void onCompleted() {
+                        mAdapter.notifyDataSetChanged();
+                        mSwipeRefreshLayout.setRefreshing(false);
+                        mIsRefreshing = false;
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                    }
+
+                    @Override
+                    public void onNext(Object o) {
+                    }
+                });
     }
 
     @Override
@@ -139,7 +147,7 @@ public class DevicesActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
-        BleScanner.stopLeScan(mLeScanCallback);
         super.onPause();
+        BleScanner.stopLeScan(mLeScanCallback);
     }
 }
