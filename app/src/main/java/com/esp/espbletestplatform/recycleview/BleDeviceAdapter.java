@@ -1,11 +1,12 @@
 package com.esp.espbletestplatform.recycleview;
 
+import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.TextView;
 
 import com.esp.espbletestplatform.R;
@@ -23,7 +24,7 @@ public class BleDeviceAdapter extends RecyclerView.Adapter<BleDeviceAdapter.VH> 
      */
 
     public static interface OnRecyclerViewItemClickListener {
-        void onItemClick(View view, String bleAddr);
+        void onItemClick(View view, BluetoothDevice bleAddr);
     }
 
     private OnRecyclerViewItemClickListener mItemClickListener;
@@ -31,7 +32,7 @@ public class BleDeviceAdapter extends RecyclerView.Adapter<BleDeviceAdapter.VH> 
     @Override
     public void onClick(View v) {
         if (mItemClickListener != null) {
-            mItemClickListener.onItemClick(v, (String) v.getTag());
+            mItemClickListener.onItemClick(v, (BluetoothDevice) v.getTag());
         }
     }
 
@@ -44,11 +45,13 @@ public class BleDeviceAdapter extends RecyclerView.Adapter<BleDeviceAdapter.VH> 
      */
 
     private final Context mAppContext;
-    private final List<String> mDatas;
+    private final List<BluetoothDevice> mBluetoothDevices;
+    private final List<Integer> mRssis;
 
-    public BleDeviceAdapter(Context context, List<String> datas) {
+    public BleDeviceAdapter(Context context, List<BluetoothDevice> bluetoothDevices,List<Integer> rssis) {
         mAppContext = context.getApplicationContext();
-        mDatas = datas;
+        mBluetoothDevices = bluetoothDevices;
+        mRssis = rssis;
     }
 
     @Override
@@ -62,22 +65,34 @@ public class BleDeviceAdapter extends RecyclerView.Adapter<BleDeviceAdapter.VH> 
 
     @Override
     public void onBindViewHolder(VH holder, int position) {
-        holder.tv.setText(mDatas.get(position));
-        holder.itemView.setTag(mDatas.get(position));
+        final BluetoothDevice bluetoothDevice = mBluetoothDevices.get(position);
+        String name = bluetoothDevice.getName();
+        if(TextUtils.isEmpty(name)) {
+            name = "Unnamed";
+        }
+        final int rssi = mRssis.get(position);
+        holder.tv_addr.setText(bluetoothDevice.getAddress());
+        holder.tv_name.setText(name);
+        holder.tv_sig.setText(Integer.toString(rssi));
+        holder.itemView.setTag(bluetoothDevice);
     }
 
     @Override
     public int getItemCount() {
-        return mDatas.size();
+        return mBluetoothDevices.size();
     }
 
     class VH extends RecyclerView.ViewHolder {
 
-        TextView tv;
+        TextView tv_addr;
+        TextView tv_name;
+        TextView tv_sig;
 
         public VH(View view) {
             super(view);
-            tv = (TextView) view.findViewById(R.id.tv_item_ble_device);
+            tv_addr = (TextView) view.findViewById(R.id.tv_dev_addr);
+            tv_name = (TextView) view.findViewById(R.id.tv_dev_name);
+            tv_sig = (TextView) view.findViewById(R.id.tv_dev_sig);
         }
     }
 }
