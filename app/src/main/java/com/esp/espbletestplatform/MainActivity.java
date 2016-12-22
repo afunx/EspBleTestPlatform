@@ -1,6 +1,7 @@
 package com.esp.espbletestplatform;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.support.annotation.NonNull;
@@ -11,8 +12,6 @@ import android.os.Bundle;
 import android.widget.Toast;
 
 import com.esp.log.InitLogger;
-
-import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -85,6 +84,11 @@ public class MainActivity extends AppCompatActivity {
                 InitLogger.init();
             }
         }.start();
+
+        // goto DevicesActivity
+        Intent intent = new Intent(this, DevicesActivity.class);
+        startActivity(intent);
+        finish();
     }
 
     private void permissionsDenied() {
