@@ -2,6 +2,7 @@ package com.esp.espbletestplatform;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.DividerItemDecoration;
@@ -17,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import rx.Observable;
+import rx.Observer;
 import rx.Scheduler;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
@@ -25,6 +27,7 @@ import rx.schedulers.Schedulers;
 
 public class DevicesActivity extends AppCompatActivity {
 
+    private SwipeRefreshLayout mSwipeRefreshLayout;
     private RecyclerView mRecyclerView;
     private List<BluetoothDevice> mBluetoothDevices;
     private List<Integer> mRssis;
@@ -37,6 +40,13 @@ public class DevicesActivity extends AppCompatActivity {
         mBluetoothDevices = new ArrayList<>();
         mRssis = new ArrayList<>();
         mAdapter = new BleDeviceAdapter(this, mBluetoothDevices, mRssis);
+        mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipeRefreshLayout);
+        mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                doRefresh();
+            }
+        });
         mRecyclerView = (RecyclerView) findViewById(R.id.recyclerview);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mRecyclerView.setAdapter(mAdapter);
@@ -84,6 +94,33 @@ public class DevicesActivity extends AppCompatActivity {
                         });
             }
         };
+    }
+
+    private void doRefresh() {
+        mSwipeRefreshLayout.setRefreshing(true);
+
+        Observable.create(new Observable.OnSubscribe<Object>() {
+            @Override
+            public void call(Subscriber<? super Object> subscriber) {
+                mBluetoothDevices.clear();
+                mRssis.clear();
+                subscriber.onCompleted();
+            }
+        }).subscribeOn(mSingleScheduler)
+        .observeOn(AndroidSchedulers.mainThread())
+        .subscribe(new Observer<Object>() {
+            @Override
+            public void onCompleted() {
+                mAdapter.notifyDataSetChanged();
+                mSwipeRefreshLayout.setRefreshing(false);
+            }
+            @Override
+            public void onError(Throwable e) {
+            }
+            @Override
+            public void onNext(Object o) {
+            }
+        });
     }
 
     @Override
