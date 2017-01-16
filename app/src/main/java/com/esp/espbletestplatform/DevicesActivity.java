@@ -16,9 +16,9 @@ import com.esp.espbletestplatform.recycleview.BleDeviceAdapter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import rx.Observable;
-import rx.Observer;
 import rx.Scheduler;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
@@ -28,7 +28,7 @@ import rx.schedulers.Schedulers;
 public class DevicesActivity extends AppCompatActivity {
 
     private SwipeRefreshLayout mSwipeRefreshLayout;
-    private volatile boolean mIsRefreshing;
+    private AtomicBoolean mIsDataClear;
     private RecyclerView mRecyclerView;
     private List<BluetoothDevice> mBluetoothDevices;
     private List<Integer> mRssis;
@@ -37,6 +37,7 @@ public class DevicesActivity extends AppCompatActivity {
     private Scheduler mSingleScheduler;
 
     private void init() {
+        mIsDataClear = new AtomicBoolean(false);
         mSingleScheduler = Schedulers.newThread();
         mBluetoothDevices = new ArrayList<>();
         mRssis = new ArrayList<>();
@@ -63,7 +64,17 @@ public class DevicesActivity extends AppCompatActivity {
 
             @Override
             public void onLeScan(final BluetoothDevice device, final int rssi, byte[] scanRecord) {
-                if (mIsRefreshing) {
+                // clear all
+                if (mIsDataClear.get()) {
+                    Observable.create(new Observable.OnSubscribe<Void>() {
+                        @Override
+                        public void call(Subscriber<? super Void> subscriber) {
+                            mBluetoothDevices.clear();
+                            mRssis.clear();
+                            mAdapter.notifyDataSetChanged();
+                            mIsDataClear.set(false);
+                        }
+                    }).observeOn(AndroidSchedulers.mainThread()).subscribe();
                     return;
                 }
                 Observable.from(mBluetoothDevices).subscribeOn(mSingleScheduler)
@@ -101,34 +112,8 @@ public class DevicesActivity extends AppCompatActivity {
     }
 
     private void doRefresh() {
-        mIsRefreshing = true;
-        mSwipeRefreshLayout.setRefreshing(true);
-
-        Observable.create(new Observable.OnSubscribe<Object>() {
-            @Override
-            public void call(Subscriber<? super Object> subscriber) {
-                mBluetoothDevices.clear();
-                mRssis.clear();
-                subscriber.onCompleted();
-            }
-        }).subscribeOn(mSingleScheduler)
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Observer<Object>() {
-                    @Override
-                    public void onCompleted() {
-                        mAdapter.notifyDataSetChanged();
-                        mSwipeRefreshLayout.setRefreshing(false);
-                        mIsRefreshing = false;
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-                    }
-
-                    @Override
-                    public void onNext(Object o) {
-                    }
-                });
+        mIsDataClear.set(true);
+        mSwipeRefreshLayout.setRefreshing(false);
     }
 
     @Override
